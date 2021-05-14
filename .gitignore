@@ -1,0 +1,16 @@
+.DS_Store
+*~
+
+# Ignore Gradle project-specific cache directory
+.gradle
+.classpath
+.project
+.idea
+
+# Ignore Gradle build output directory
+/build/
+logs
+sootOutput
+
+# Cache of project
+.gradletasknamecache
