@@ -2,11 +2,11 @@ plugins {
     id 'java'
 }
 
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
 repositories {
     mavenCentral()
-    maven {
-        url 'https://soot-build.cs.uni-paderborn.de/nexus/repository/soot-release/'
-    }
 }
 
 dependencies {
