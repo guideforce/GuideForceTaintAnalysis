@@ -26,6 +26,11 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public final class InterProcAnalysis {
+
+  private static boolean SHOW_JIMPLE_CODE = false;
+  private static boolean PAINT_UNITGRAPH = false;
+  private static boolean COUNTEREXAMPLE_REPORT = true;
+
   private final Policy policy;
   private final ClassTable state;
   private final MethodTable.Key entryPointKey;
@@ -78,23 +83,27 @@ public final class InterProcAnalysis {
     doInfinitaryAnalysis();
 
     // If the program may not adhere to the guideline, try to find a problematic path.
-    if (!state.get(entryPointKey).getType().getAggregateFinitary().accepted()) {
-      FinitaryEffectAnalysis fea = new FinitaryEffectAnalysis(finitaryResults.get(entryPointKey));
-      boolean res = fea.searchCounterExample(problematicPath);
-      if (!res) {
+    if (COUNTEREXAMPLE_REPORT) {
+      if (!state.get(entryPointKey).getType().getAggregateFinitary().accepted()) {
+        FinitaryEffectAnalysis fea = new FinitaryEffectAnalysis(finitaryResults.get(entryPointKey));
+        boolean res = fea.searchCounterExample(problematicPath);
+        if (!res) {
+          problematicPath.clear();
+        }
+      } else if (!infinitaryResults.get(new MethodVariable(entryPointKey)).getRightHandSide().getConstantTerm().accepted()) {
+        FinitaryEffectAnalysis fea = new FinitaryEffectAnalysis(finitaryResults.get(entryPointKey));
+        boolean res = fea.searchCounterExampleInf(problematicPath);
+        if (!res) {
+          problematicPath.clear();
+        }
+      } else {
         problematicPath.clear();
       }
-    } else if (!infinitaryResults.get(new MethodVariable(entryPointKey)).getRightHandSide().getConstantTerm().accepted()) {
-      FinitaryEffectAnalysis fea = new FinitaryEffectAnalysis(finitaryResults.get(entryPointKey));
-      boolean res = fea.searchCounterExampleInf(problematicPath);
-      if (!res) {
-        problematicPath.clear();
-      }
-    } else {
-      problematicPath.clear();
     }
+
     logger.info("======== Analysis result: \n");
     logger.info(analysisResult());
+
     return true;
   }
 
@@ -235,8 +244,10 @@ public final class InterProcAnalysis {
     }
 
     // Draw the unitGraph
-//    String graphFile = drawUnitGraph(unitGraph);
-//    buffer.append("The dot file is in: ").append(graphFile).append("\n\n");
+    if (PAINT_UNITGRAPH) {
+      String graphFile = drawUnitGraph(unitGraph);
+      buffer.append("The dot file is in: ").append(graphFile).append("\n\n");
+    }
 
     // Acceptable effects
     buffer.append("\n------------------\n");
@@ -299,24 +310,27 @@ public final class InterProcAnalysis {
       buffer.append("\n");
       buffer.append("\n");
 
-//      // Print the typing contexts of the method if it has a body
-//      Body b = state.getBody(methodEntry.getKey());
-//      if (b == null) continue;
-//      FinitaryEffectAnalysis intra2 = finitaryResults.get(methodEntry.getKey());
-//      if (intra2 == null) continue;
-//      String name = methodEntry.getKey().getMethodRef().resolve().getName();
-//      buffer.append("  Typing contexts in the body of " + name + "\n");
-//      buffer.append("  " + dashedLine(name.length() + 31));
-//      BriefUnitGraph ug = new BriefUnitGraph(b);
-//      for (Unit u : ug) {
-//        buffer.append("  ").append(u).append("\n");
-//        buffer.append("  // - context: ");
-//        FinitaryEffectFlow flowBefore = intra2.getFlowAfter(u);
-//        buffer.append(flowBefore.get().stream()
-//                .map(entry -> entry.getKey() + " & " + entry.getEffect())
-//                .collect(Collectors.joining("\n  //       | ")));buffer.append("\n");
-//      }
-//      buffer.append("\n");
+      // Print the typing contexts of the method if it has a body
+      if (SHOW_JIMPLE_CODE) {
+        Body b = state.getBody(methodEntry.getKey());
+        if (b == null) continue;
+        FinitaryEffectAnalysis intra2 = finitaryResults.get(methodEntry.getKey());
+        if (intra2 == null) continue;
+        String name = methodEntry.getKey().getMethodRef().resolve().getName();
+        buffer.append("  Typing contexts in the body of " + name + "\n");
+        buffer.append("  " + dashedLine(name.length() + 31));
+        BriefUnitGraph ug = new BriefUnitGraph(b);
+        for (Unit u : ug) {
+          buffer.append("  ").append(u).append("\n");
+          buffer.append("  // - context: ");
+          FinitaryEffectFlow flowBefore = intra2.getFlowAfter(u);
+          buffer.append(flowBefore.get().stream()
+                  .map(entry -> entry.getKey() + " & " + entry.getEffect())
+                  .collect(Collectors.joining("\n  //       | ")));
+          buffer.append("\n");
+        }
+        buffer.append("\n");
+      }
     }
 
     // The source code of the analyzed method
@@ -326,36 +340,6 @@ public final class InterProcAnalysis {
       sourceCode = Files.readAllLines(Paths.get(filePath));
     } catch (IOException e) {
       buffer.append("Cannot find the file " + filePath);
-//    for (Unit u : unitGraph) {
-//      FinitaryEffectFlow flow = intra.getFlowAfter(u);
-//      buffer.append("  ").append(u).append("\n");
-//      Consumer<Value> typeOfValueComment = v -> {
-//        if (v instanceof Local) {
-//          Local x = (Local) v;
-//          buffer.append("  // - type of ")
-//                  .append(x)
-//                  .append(": ")
-//                  .append(flow.thenGet(x))
-//                  .append("\n");
-//        }
-//      };
-//      if (u instanceof InvokeStmt) {
-//        InvokeExpr expr = ((InvokeStmt) u).getInvokeExpr();
-//        if (expr instanceof InstanceInvokeExpr) {
-//          typeOfValueComment.accept(((InstanceInvokeExpr) expr).getBase());
-//        }
-//      } else if (u instanceof AssignStmt) {
-//        typeOfValueComment.accept(((AssignStmt) u).getLeftOp());
-//      } else if (u instanceof IdentityStmt) {
-//        typeOfValueComment.accept(((IdentityStmt) u).getLeftOp());
-//      }
-//      buffer.append("  // - flow after: ");
-//      buffer.append(flow.get().stream()
-//              .map(entry -> entry.getKey() + " & " + entry.getEffect())
-//              .collect(Collectors.joining("\n  //             | ")));
-//      buffer.append("\n");
-//    }
-//    buffer.append("}\n");
       return buffer.toString();
     }
 
@@ -410,46 +394,6 @@ public final class InterProcAnalysis {
     buffer.append("  // - type: ").append(effectType);
     buffer.append("\n");
 
-//    for (Unit u : unitGraph) {
-//      FinitaryEffectFlow flow = intra.getFlowAfter(u);
-//      buffer.append("  ").append(u).append("\n");
-//      Consumer<Value> typeOfValueComment = v -> {
-//        if (v instanceof Local) {
-//          Local x = (Local) v;
-//          buffer.append("  // - type of ")
-//                  .append(x)
-//                  .append(": ")
-//                  .append(flow.thenGet(x))
-//                  .append("\n");
-//        }
-//      };
-//      if (u instanceof InvokeStmt) {
-//        InvokeExpr e = ((InvokeStmt) u).getInvokeExpr();
-//        if (e instanceof InstanceInvokeExpr) {
-//          typeOfValueComment.accept(((InstanceInvokeExpr) e).getBase());
-//        }
-//      } else if (u instanceof AssignStmt) {
-//        typeOfValueComment.accept(((AssignStmt) u).getLeftOp());
-//      } else if (u instanceof IdentityStmt) {
-//        typeOfValueComment.accept(((IdentityStmt) u).getLeftOp());
-//      }
-//      buffer.append("  // - flow after: ");
-//      buffer.append(flow.get().stream()
-//              .map(entry -> entry.getKey() + " & " + entry.getEffect())
-//              .collect(Collectors.joining("\n  //             | ")));
-//      buffer.append("\n");
-//    }
-//    buffer.append("}\n");
-
-//    Finitary acceptedFinitary = policy.getAbstractDomain().getAcceptedFinitary();
-//
-//    buffer.append("\n------------------------------------------------------------\n");
-//    buffer.append("Return type: (").append(effectType.getType()).append(")\n");
-//    buffer.append("Exceptional type: (").append(effectType.getExceptionalType()).append(")\n");
-////    buffer.append("Overall finitary effect: ").append(typeAndEffects.getFinitary()).append("\n");
-//    buffer.append("Acceptable finitary effect: ").append(acceptedFinitary);
-//    buffer.append("\n------------------------------------------------------------\n");
-
     // Print the possibly problematic path if found
     if (!effectType.getType().getAggregateFinitary().accepted()) {
       if (!problematicPath.isEmpty()) {
@@ -501,83 +445,6 @@ public final class InterProcAnalysis {
 
     return buffer.toString();
   }
-
-//  class UnitAndEffect {
-//    final Unit u;
-//    final Finitary eff;
-//
-//    public UnitAndEffect(Unit u, Finitary eff) {
-//      this.u = u;
-//      this.eff = eff;
-//    }
-//
-//    public Unit getUnit() {
-//      return u;
-//    }
-//
-//    public Finitary getEffect() {
-//      return eff;
-//    }
-//
-//    @Override
-//    public boolean equals(Object o) {
-//      if (this == o) return true;
-//      if (o == null || getClass() != o.getClass()) return false;
-//      UnitAndEffect that = (UnitAndEffect) o;
-//      return this.u.equals(that.u) &&
-//              this.eff.equals(that.eff);
-//    }
-//
-//    @Override
-//    public int hashCode() {
-//      return Objects.hash(u, eff);
-//    }
-//  }
-//
-//  /**
-//   * A depth-first search algorithm for finding a path of units whose effect is not acceptable.
-//   *
-//   * @param unitGraph    graph to search
-//   * @param intra        analysis result for getting the effect of each statement/unit
-//   * @param curUnit      current unit
-//   * @param path         path obtained so far
-//   * @param acceptedEff  accepted effect
-//   * @return  a boolean value indicating if a path is found
-//   */
-//  private boolean search (ExceptionalUnitGraph unitGraph, FinitaryEffectAnalysis intra, Unit
-//  curUnit, List<UnitAndEffect> path, Finitary acceptedEff) {
-//
-//    Finitary accEff = policy.getAbstractDomain().oneFinitary();
-//    if (!path.isEmpty()) {
-//      accEff = path.get(path.size()-1).getEffect();
-//    }
-//    Finitary curEff = intra.getFlowAfter(curUnit).get().getAggregateFinitary(); // intra.getStmtEffect((Stmt) curUnit);
-//
-//    Finitary eff = accEff.multiply(curEff);
-//
-//    // return false when entering a unproductive loop
-//    if (path.contains(new UnitAndEffect(curUnit,eff))) {
-//      return false;
-//    }
-//
-//    path.add(new UnitAndEffect(curUnit,eff));
-//
-//    // return true if it's the end of the graph and the effect is not accepted
-//    if (unitGraph.getSuccsOf(curUnit).isEmpty() && !acceptedEff.contain(eff)) {
-//      return true;
-//    }
-//
-//    for (Unit u : unitGraph.getSuccsOf(curUnit)) {
-//      if (search(unitGraph, intra, u, path, acceptedEff))
-//        return true;
-//    }
-//
-//    // No extension of the path is possible.
-//    // Remove the last node in the path.
-//    path.remove(path.size()-1);
-//
-//    return false;
-//  }
 
   private String dashedLine (int n) {
     return new String(new char[n]).replace("\0", "-") + "\n";
