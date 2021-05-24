@@ -7,11 +7,22 @@ import guideforce.policy.AbstractDomain.*;
 import org.junit.Test;
 import soot.G;
 
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 
 import static org.junit.Assert.assertEquals;
 
 public class Evaluation {
+
+    // Set PRINT_RESULTS to ture if you want to print the analysis results.
+    private static boolean PRINT_RESULTS = false;
+
+    // Set RECORD_TIME to true if you want to record the analysis time excluding the time for setting up Soot.
+    private static boolean RECORD_TIME = false;
+    // Path of the file for recording the analysis time.
+    private static String resultFile = "result.txt";
 
     private static String classPath = "build/classes/java/test/" + File.pathSeparator +
             "build/classes/java/main/" + File.pathSeparator +
@@ -52,9 +63,16 @@ public class Evaluation {
                      Finitary finExpect, Infinitary infExpect) {
         G.reset();
         TSA tsa = new TSA(classPath, className);
-        InterProcAnalysis analysis = tsa.run(policy, 1, methodName);
 
-        //System.out.println(analysis.analysisResult());
+        long t1 = System.currentTimeMillis();
+        InterProcAnalysis analysis = tsa.run(policy, 1, methodName);
+        long t2 = System.currentTimeMillis();
+        long t = t2 - t1;
+        recordTime(className + "." + methodName, t);
+
+        if (PRINT_RESULTS) {
+            System.out.println(analysis.analysisResult());
+        }
         EffectType te = analysis.getTypeAndEffectsAtEntryPoint();
         Finitary finitary = te.getAggregateFinitary();
         Infinitary infinitary = te.getInfinitary().getConstantTerm();
@@ -73,15 +91,34 @@ public class Evaluation {
     public void taintednessTest(String className, String methodName, boolean expect) {
         G.reset();
         TSA tsa = new TSA(classPath, className);
-        InterProcAnalysis analysis = tsa.run(binaryPolicy, 1, methodName);
 
-        //System.out.println(analysis.analysisResult());
+        long t1 = System.currentTimeMillis();
+        InterProcAnalysis analysis = tsa.run(binaryPolicy, 1, methodName);
+        long t2 = System.currentTimeMillis();
+        long t = t2 - t1;
+        recordTime(className + "." + methodName, t);
+
+        if (PRINT_RESULTS) {
+            System.out.println(analysis.analysisResult());
+        }
         EffectType te = analysis.getTypeAndEffectsAtEntryPoint();
         Finitary finitary = te.getAggregateFinitary();
         Infinitary infinitary = te.getInfinitary().getConstantTerm();
 
         boolean result = finitary.accepted() & infinitary.accepted();
         assertEquals(expect, result);
+    }
+
+    void recordTime (String name, long t) {
+        if (!RECORD_TIME)
+            return;
+        try {
+            BufferedWriter writer = new BufferedWriter(new FileWriter(resultFile, true));
+            writer.append(name + "\t" + t + "\n");
+            writer.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     /* ======================== Testing paper examples ======================== */
@@ -775,6 +812,7 @@ public class Evaluation {
         taintednessTest("securibench.micro.datastructures.Datastructures4", "doGet", true) ;
     }
 
+    // Fail to find a problematic path
     @Test
     public void Datastructures05() {
         taintednessTest("securibench.micro.datastructures.Datastructures5", "doGet", false) ;
@@ -1027,6 +1065,7 @@ public class Evaluation {
         taintednessTest("securibench.micro.strong_updates.StrongUpdates2", "doGet", true) ;
     }
 
+    // False positive: our field updates are weak updates.
     @Test
     public void StrongUpdates03() {
         taintednessTest("securibench.micro.strong_updates.StrongUpdates3", "doGet", true) ;
