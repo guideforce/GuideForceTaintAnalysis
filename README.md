@@ -4,14 +4,9 @@ A common approach to improve software quality is to use programming guidelines t
 
 The [previous version](https://github.com/ezal/TSA) of the tool was developed by Zălinescu et al., based on their [APLAS'2017 paper](https://doi.org/10.1007/978-3-319-71237-6_5).
 
-## Authors
-- [Ulrich Schöpp](https://ulrichschoepp.de/)
-- [Chuangjie Xu](https://cj-xu.github.io/)
-- Jakob Knauer
-
 ## New Features
 The new features of the current version include:
-- It enhaces the analysis precision by capturing the effect for each region where a value may locate.
+- It enhaces the analysis precision by capturing different effects depending on regions.
 - Effect annotations are given by the abstract interpretation based on Büchi automata due to [Hofmann and Chen](https://doi.org/10.1145/2603088.2603127).
 - It can analyze also nonterminating programs by capturing the information of their infinite traces.
 - It supports exception handling, i.e., it can analyze programs with exceptions.
@@ -19,12 +14,9 @@ The new features of the current version include:
 
 ## Prerequisites
 - Java 8
-- [Soot](http://soot-oss.github.io/soot/)
-- JUnit (tested with version 4.13)
-- SLF4J (tested with version 1.7.30)
 
 ## Building
-The tool can be built using [Gradle](https://gradle.org/). A configuration file "[build.gradle](https://github.com/cj-xu/GuideForceJava/blob/main/build.gradle)" is provided in the repository. For example, in an IDE (e.g. [IntelliJ IDEA](https://www.jetbrains.com/idea/)), one can setup a project for the tool by opening the build.gradle file as a project.
+The tool can be built using [Gradle](https://gradle.org/). A configuration file "[build.gradle](build.gradle)" is provided in the repository. For example, in an IDE (e.g. [IntelliJ IDEA](https://www.jetbrains.com/idea/)), one can setup a project for the tool by opening the build.gradle file as a project.
 
 ## Experiment
 The tool was tested and evaluated with the [Securibench Micro](http://too4words.github.io/securibench-micro/) benchmark as well as a bunch of additional examples.
@@ -39,3 +31,12 @@ The experiment can be run from the commond-line by typing:
 ```
 ./gradlew build
 ```
+
+## Code Contributors
+
+- Eugen Zălinescu
+- [Ulrich Schöpp](https://ulrichschoepp.de/)
+- [Chuangjie Xu](https://cj-xu.github.io/)
+- Jakob Knauer
+
+
