@@ -17,7 +17,7 @@ import static org.junit.Assert.assertEquals;
 public class Evaluation {
 
     // Set PRINT_RESULTS to ture if you want to print the analysis results.
-    private static boolean PRINT_RESULTS = false;
+    private static boolean PRINT_RESULTS = true;
 
     // Set RECORD_TIME to true if you want to record the analysis time excluding the time for setting up Soot.
     private static boolean RECORD_TIME = false;
