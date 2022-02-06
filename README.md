@@ -2,7 +2,10 @@
 
 A common approach to improve software quality is to use programming guidelines to avoid common kinds of errors. This tool is **a static analyzer for enforcing programming guidelines to Java programs**. It takes a Java bytecode program and a programming guideline as inputs, infers the trace information of the program and then verifies if it is accepted by the guideline. If the inferred result is not acceptable, the tool tries to search for an execution path of the program that violates the guideline.
 
-The [previous version](https://github.com/ezal/TSA) of the tool was developed by Zălinescu et al., based on their [APLAS'2017 paper](https://doi.org/10.1007/978-3-319-71237-6_5).
+This tool is based on our [PPDP'21 paper](https://doi.org/10.1145/3479394.3479413):
+> S. Erbatur and U. Schöpp and C. Xu. **Type-based enforcement of infinitary trace properties for Java**. PPDP 2021, ACM, Article 18, 1–14.
+
+The [previous version](https://github.com/ezal/TSA) was developed by Zălinescu et al., based on their [APLAS'17 paper](https://doi.org/10.1007/978-3-319-71237-6_5).
 
 ## New Features
 The new features of the current version include:
