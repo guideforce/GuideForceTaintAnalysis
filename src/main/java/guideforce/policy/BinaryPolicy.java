@@ -58,8 +58,41 @@ public class BinaryPolicy implements Policy {
 
   @Override
   public Intrinsic getIntrinsicMethod(SootMethodRef method) {
-    // TODO: Write specific tests for all cases.
     switch (method.getSignature()) {
+      // Sensitive sinks:
+      // The following methods have the effects including the regions of the arguments,
+      // i.e., if the input is tainted, then the method emits an event T.
+      case "<java.lang.Runtime: java.lang.Process exec(java.lang.String)>":
+      case "<ourlib.nonapp.TaintAPI: void outputString(java.lang.String)>":
+        return new Intrinsic() {
+          @Nonnull
+          @Override
+          public Monad<Region> getReturnType(Region region, List<Region> refinedArgs) {
+            assert method.getReturnType().equals(VoidType.v());
+            return Monad.pure(abstractDomain, (Region) SpecialRegion.BASETYPE_REGION)
+                    .then(getEffect(region, refinedArgs));
+          }
+
+          @Nonnull
+          @Override
+          public Monad<Region> getExceptionalType(Region region, List<Region> argumentTypes) {
+            return Monad.empty(abstractDomain);
+          }
+
+          @Nonnull
+          public Finitary getEffect(Region region, List<Region> argumentTypes) {
+            // has exactly the effects that are included in the regions of its argument.
+            assert (argumentTypes.size() == 1);
+            Region arg1 = argumentTypes.get(0);
+            Finitary effect = abstractDomain.oneFinitary();
+            // argument is atomic, so this loop will be taken exactly once
+            if (arg1 instanceof MonoidRegion) {
+              effect = ((MonoidRegion) arg1).asFinitary();
+            }
+            return effect;
+          }
+        };
+      // string constructor
       case "<java.lang.String: void <init>()>":
         return new Intrinsic() {
           @Nonnull
@@ -90,6 +123,7 @@ public class BinaryPolicy implements Policy {
             return Monad.empty(abstractDomain);
           }
         };
+      // string operators that return a tainted string if the original or the input is tainted
       case "<java.lang.String: java.lang.String concat(java.lang.String)>":
       case "<java.lang.String: java.lang.String valueOf(java.lang.String)>":
         return new Intrinsic() {
@@ -106,6 +140,7 @@ public class BinaryPolicy implements Policy {
             return Monad.empty(abstractDomain);
           }
         };
+      // string operators that return a tainted string if the original is tainted
       case "<java.lang.String: java.lang.String replace(char,char)>":
       case "<java.lang.String: java.lang.String substring(int)>":
       case "<java.lang.String: java.lang.String substring(int,int)>":
@@ -126,36 +161,6 @@ public class BinaryPolicy implements Policy {
           @Override
           public Monad<Region> getExceptionalType(Region region, List<Region> argumentTypes) {
             return Monad.empty(abstractDomain);
-          }
-        };
-      case "<ourlib.nonapp.TaintAPI: void outputString(java.lang.String)>":
-        return new Intrinsic() {
-          @Nonnull
-          @Override
-          public Monad<Region> getReturnType(Region region, List<Region> refinedArgs) {
-            assert method.getReturnType().equals(VoidType.v());
-            return Monad.pure(abstractDomain, (Region) SpecialRegion.BASETYPE_REGION)
-                    .then(getEffect(region, refinedArgs));
-          }
-
-          @Nonnull
-          @Override
-          public Monad<Region> getExceptionalType(Region region, List<Region> argumentTypes) {
-            return Monad.empty(abstractDomain);
-          }
-
-          @Nonnull
-          public Finitary getEffect(Region region, List<Region> argumentTypes) {
-            // outputString has exactly the effects that are included in the regions of its
-            // argument.
-            assert (argumentTypes.size() == 1);
-            Region arg1 = argumentTypes.get(0);
-            Finitary effect = abstractDomain.oneFinitary();
-            // argument is atomic, so this loop will be taken exactly once
-              if (arg1 instanceof MonoidRegion) {
-                effect = ((MonoidRegion) arg1).asFinitary();
-              }
-            return effect;
           }
         };
       //case "<java.net.URLDecoder: java.lang.String decode(java.lang.String,java.lang.String)>":
